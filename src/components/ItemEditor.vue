@@ -77,6 +77,8 @@
                             </div>
                         </div>
 
+                        <PasswordStrengthBar :password="form.password" class="mt-2" />
+
                         <div v-if="showGenerator"
                             class="mt-3 p-3 bg-gray-50 dark:bg-gray-900 rounded-md border border-gray-200 dark:border-gray-700">
                             <PasswordGenerator @generated="onGenerated" />
@@ -148,6 +150,7 @@ import { getItem } from '@/db/items-repo'
 import { copySensitive } from '@/utils/clipboard'
 import PasswordGenerator from '@/components/PasswordGenerator.vue'
 import type { IItemPayload } from '@/db/types'
+import PasswordStrengthBar from './PasswordStrengthBar.vue'
 
 interface Props {
     open: boolean

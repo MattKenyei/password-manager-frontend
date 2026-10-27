@@ -15,18 +15,32 @@
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Master password
-                    </label>
+                    <div class="flex items-center justify-between mb-1">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Master password
+                        </label>
+                        <button type="button" class="text-xs px-2 py-0.5 rounded-md font-medium
+                     bg-indigo-50 text-indigo-700 hover:bg-indigo-100
+                     dark:bg-indigo-950/50 dark:text-indigo-300 dark:hover:bg-indigo-900
+                     transition-colors" @click="generateMasterPassword">
+                            Generate
+                        </button>
+                    </div>
+
                     <div class="relative">
                         <input v-model="password" :type="showPassword ? 'text' : 'password'" autocomplete="new-password"
                             required
-                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-                        <button type="button" class="absolute right-2 top-2 text-xs text-gray-500 dark:text-gray-400"
-                            @click="showPassword = !showPassword">
+                            class="w-full px-3 py-2 pr-16 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                        <button type="button" class="absolute right-2 top-1.5 px-2 py-1 rounded-md text-xs font-medium
+                     bg-gray-200 text-gray-700 hover:bg-gray-300 hover:text-indigo-600
+                     dark:bg-gray-600 dark:text-gray-200 dark:hover:bg-gray-500 dark:hover:text-white
+                     transition-colors" @click="showPassword = !showPassword">
                             {{ showPassword ? 'Hide' : 'Show' }}
                         </button>
                     </div>
+
+                    <PasswordStrengthBar :password="password" class="mt-2" />
+
                     <p v-if="passwordError" class="text-sm text-red-600 dark:text-red-400 mt-1">
                         {{ passwordError }}
                     </p>
@@ -45,10 +59,12 @@
                     </p>
                 </div>
 
-                <p class="text-xs text-gray-500 dark:text-gray-400">
-                    Your master password never leaves this device. If you lose it — your
+                <div
+                    class="text-xs text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 rounded-md p-3">
+                    <strong>Important:</strong> write down your master password or save it
+                    somewhere safe. It never leaves your device, and if you lose it — your
                     vault cannot be recovered.
-                </p>
+                </div>
 
                 <p v-if="auth.lastError" class="text-sm text-red-600 dark:text-red-400">
                     {{ auth.lastError }}
@@ -74,6 +90,8 @@
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import PasswordStrengthBar from '@/components/PasswordStrengthBar.vue'
+import { generatePassword, DEFAULT_GENERATOR_OPTIONS } from '@/utils/password-generator'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -100,6 +118,17 @@ const canSubmit = computed(
         passwordsMatch.value &&
         !auth.busy,
 )
+
+const generateMasterPassword = (): void => {
+    const pwd = generatePassword({
+        ...DEFAULT_GENERATOR_OPTIONS,
+        length: 32,
+        avoidAmbiguous: true,
+    })
+    password.value = pwd
+    passwordConfirm.value = pwd
+    showPassword.value = true
+}
 
 const submit = async (): Promise<void> => {
     if (!canSubmit.value) return
