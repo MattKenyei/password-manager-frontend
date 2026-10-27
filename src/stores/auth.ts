@@ -13,6 +13,8 @@ import {
     saveSessionSettings,
     type ISessionSettings,
 } from '@/platform/session-settings'
+import { startWs, stopWs, updateToken } from '@/services/websocket'
+import { triggerSync } from '@/services/sync'
 
 const ACCESS_TOKEN_KEY = 'pm.access_token'
 const REFRESH_TOKEN_KEY = 'pm.refresh_token'
@@ -47,6 +49,7 @@ export const useAuthStore = defineStore('auth', () => {
                 localStorage.removeItem(REFRESH_TOKEN_KEY)
             }
         }
+        updateToken(access)
     }
 
     const clearTokens = (): void => {
@@ -110,7 +113,6 @@ export const useAuthStore = defineStore('auth', () => {
                 wrapped_account_key: bytesToBase64(wrapped),
             })
 
-            // authKey ещё нужен для loginFinish — обнулим в finally
             await loginFinish(userEmail, authKey, accountKey)
         } catch (err) {
             const apiErr = extractApiError(err)
@@ -143,7 +145,9 @@ export const useAuthStore = defineStore('auth', () => {
         session.setWrappedAccountKey(base64ToBytes(resp.wrapped_account_key))
 
         isUnlocked.value = true
+        const accessToken = localStorage.getItem('pm.access_token') ?? ''
         touchActivity()
+        startWs(accessToken, () => { void triggerSync() })
     }
 
     const login = async (userEmail: string, masterPassword: string): Promise<void> => {
@@ -180,6 +184,12 @@ export const useAuthStore = defineStore('auth', () => {
 
                 isUnlocked.value = true
                 touchActivity()
+
+
+                const accessToken = localStorage.getItem('pm.access_token') ?? ''
+                if (accessToken) {
+                    startWs(accessToken, () => { void triggerSync() })
+                }
             } finally {
                 masterKey.fill(0)
                 authKey.fill(0)
@@ -209,6 +219,7 @@ export const useAuthStore = defineStore('auth', () => {
     const lock = (): void => {
         session.lock()
         isUnlocked.value = false
+        stopWs()
         setAccessToken(null)
     }
 
