@@ -10,6 +10,22 @@ body {
     sans-serif;
 }
 
+html.dark {
+  color-scheme: dark;
+}
+
 #app {
   min-height: 100vh;
+}
+
+.dark input:-webkit-autofill,
+.dark input:-webkit-autofill:hover,
+.dark input:-webkit-autofill:focus,
+.dark textarea:-webkit-autofill,
+.dark textarea:-webkit-autofill:hover,
+.dark textarea:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0px 1000px var(--color-gray-700, #374151) inset !important;
+  -webkit-text-fill-color: var(--color-gray-100, #f3f4f6) !important;
+  transition: background-color 5000s ease-in-out 0s;
+  border-color: var(--color-gray-600, #4b5563) !important;
 }
