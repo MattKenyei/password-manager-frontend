@@ -1,7 +1,13 @@
+<template>
+  <RouterView />
+  <ToastContainer />
+</template>
+
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import ToastContainer from '@/components/ToastContainer.vue'
 
 const auth = useAuthStore()
 const router = useRouter()
@@ -53,7 +59,3 @@ onBeforeUnmount(() => {
   }
 })
 </script>
-
-<template>
-  <RouterView />
-</template>

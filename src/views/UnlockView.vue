@@ -29,9 +29,6 @@
                     </div>
                 </div>
 
-                <p v-if="auth.lastError" class="text-sm text-red-600 dark:text-red-400">
-                    {{ auth.lastError }}
-                </p>
 
                 <button type="submit" :disabled="!canSubmit"
                     class="w-full py-2 bg-indigo-600 text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-indigo-700">
@@ -53,10 +50,12 @@
 import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useToastStore } from '@/stores/toast'
 
 const router = useRouter()
 const route = useRoute()
 const auth = useAuthStore()
+const toast = useToastStore()
 
 const email = ref(auth.email ?? '')
 const password = ref('')
@@ -70,9 +69,11 @@ const submit = async (): Promise<void> => {
     if (!canSubmit.value) return
     try {
         await auth.login(email.value, password.value)
+        toast.success('Vault unlocked')
         const redirect = (route.query.redirect as string) || '/vault'
         router.push(redirect)
-    } catch {
+    } catch (err) {
+        toast.error('Unlock failed', (err as Error).message || 'Invalid email or password')
     }
 }
 </script>
