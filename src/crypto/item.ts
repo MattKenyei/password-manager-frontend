@@ -13,6 +13,7 @@ export const emptyPayload = (): IItemPayload => ({
     url: '',
     notes: '',
     tags: [],
+    totp: null,
 })
 
 export const encryptPayload = async (accountKey: Uint8Array, itemId: string, payload: IItemPayload): Promise<string> => {
@@ -36,6 +37,7 @@ export const decryptPayload = async (accountKey: Uint8Array, itemId: string, enc
             url: parsed.url ?? '',
             notes: parsed.notes ?? '',
             tags: parsed.tags ?? [],
+            totp: parsed.totp ?? null,
         }
     } finally {
         itemKey.fill(0)
