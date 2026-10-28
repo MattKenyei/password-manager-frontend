@@ -87,6 +87,39 @@
                     </div>
 
                     <div>
+                        <div class="flex items-center justify-between mb-1">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Two-factor code (TOTP)
+                            </label>
+                            <button v-if="!form.totp" type="button" class="text-xs px-2 py-0.5 rounded-md font-medium
+             bg-indigo-50 text-indigo-700 hover:bg-indigo-100
+             dark:bg-indigo-950/50 dark:text-indigo-300 dark:hover:bg-indigo-900
+             transition-colors" @click="showTotpInput = !showTotpInput">
+                                {{ showTotpInput ? 'Cancel' : 'Add' }}
+                            </button>
+                            <button v-else type="button" class="text-xs text-red-600 dark:text-red-400 hover:underline"
+                                @click="clearTotp">
+                                Remove
+                            </button>
+                        </div>
+
+                        <TotpDisplay v-if="form.totp" :config="form.totp" />
+
+                        <div v-else-if="showTotpInput" class="space-y-2">
+                            <textarea v-model="totpInput" rows="2"
+                                placeholder="otpauth://totp/... или Base32 secret (JBSWY3DPEHPK3PXP)"
+                                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-xs font-mono"
+                                @input="totpError = null" />
+                            <button type="button"
+                                class="px-3 py-1.5 bg-indigo-600 text-white rounded-md text-sm hover:bg-indigo-700"
+                                @click="parseTotpInput">
+                                Save TOTP
+                            </button>
+                            <p v-if="totpError" class="text-xs text-red-600 dark:text-red-400">{{ totpError }}</p>
+                        </div>
+                    </div>
+
+                    <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                             URL
                         </label>
@@ -153,6 +186,8 @@ import PasswordGenerator from '@/components/PasswordGenerator.vue'
 import type { IItemPayload } from '@/db/types'
 import PasswordStrengthBar from './PasswordStrengthBar.vue'
 import { useToastStore } from '@/stores/toast.ts'
+import { DEFAULT_TOTP, isValidBase32Secret, parseOtpauthUri } from '@/utils/totp.ts'
+import TotpDisplay from './TotpDisplay.vue'
 
 interface Props {
     open: boolean
@@ -167,6 +202,9 @@ const emit = defineEmits<{
 }>()
 
 const toast = useToastStore()
+const totpInput = ref('')
+const totpError = ref<string | null>(null)
+const showTotpInput = ref(false)
 
 const form = ref<IItemPayload>(emptyPayload())
 const showPassword = ref(false)
@@ -228,6 +266,10 @@ watch(
         } finally {
             loading.value = false
         }
+
+        totpInput.value = ''
+        totpError.value = null
+        showTotpInput.value = false
     },
     { immediate: true },
 )
@@ -249,5 +291,40 @@ const onGenerated = (password: string) => {
     form.value.password = password
     showGenerator.value = false
     showPassword.value = true
+}
+
+const parseTotpInput = () => {
+    totpError.value = null
+    const raw = totpInput.value.trim()
+    if (!raw) {
+        form.value.totp = null
+        return
+    }
+
+    if (raw.startsWith('otpauth://')) {
+        const parsed = parseOtpauthUri(raw)
+        if (!parsed) {
+            totpError.value = 'Invalid otpauth:// URI'
+            return
+        }
+        form.value.totp = parsed
+        return
+    }
+
+    if (isValidBase32Secret(raw)) {
+        form.value.totp = {
+            secret: raw.toUpperCase().replace(/\s+/g, ''),
+            ...DEFAULT_TOTP,
+        }
+        return
+    }
+
+    totpError.value = 'Paste an otpauth:// URI or a Base32 secret'
+}
+
+const clearTotp = () => {
+    form.value.totp = null
+    totpInput.value = ''
+    totpError.value = null
 }
 </script>

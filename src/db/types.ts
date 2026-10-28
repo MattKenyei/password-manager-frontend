@@ -1,3 +1,12 @@
+export interface ITotpConfig {
+    secret: string
+    algorithm: 'SHA-1' | 'SHA-256' | 'SHA-512'
+    digits: number
+    period: number
+    issuer?: string
+    account?: string
+}
+
 export interface IItemPayload {
     title: string
     username: string
@@ -5,6 +14,7 @@ export interface IItemPayload {
     url: string
     notes: string
     tags: string[]
+    totp?: ITotpConfig | null
 }
 
 export type SyncState = 'synced' | 'pending' | 'conflict' | 'deleted'
