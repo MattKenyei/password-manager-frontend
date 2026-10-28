@@ -125,6 +125,7 @@
 
 <script setup lang="ts">
 import { getAllItems } from '@/db/items-repo';
+import { useToastStore } from '@/stores/toast';
 import { useVaultStore } from '@/stores/vault';
 import { downloadFile, exportEncryptedBackup, exportPlaintextCsv, exportPlaintextJson, importEncryptedBackup, importPlaintext } from '@/utils/import-export';
 import { ref } from 'vue';
@@ -141,6 +142,7 @@ const props = defineProps<IProps>()
 const emit = defineEmits<IEmits>()
 
 const vault = useVaultStore()
+const toast = useToastStore()
 
 type Tab = 'export' | 'import'
 const activeTab = ref<Tab>('export')
@@ -176,13 +178,14 @@ const handleExportEncrypted = async () => {
     exportError.value = null
     try {
         const allDbItems = await getAllItems()
-
         const fileContent = await exportEncryptedBackup(backupPassword.value, allDbItems)
         downloadFile(fileContent, `vault-backup-${new Date().toISOString().split('T')[0]}.json`, 'application/json')
-    } catch (error) {
-        exportError.value = (error as Error).message
+        toast.success('Backup exported', 'Encrypted backup downloaded')
+    } catch (err) {
+        exportError.value = (err as Error).message
+        toast.error('Export failed', (err as Error).message)
     } finally {
-        isExporting.value = false;
+        isExporting.value = false
         backupPassword.value = ''
     }
 }
@@ -191,29 +194,38 @@ const handleExportPlaintext = async (format: 'json' | 'csv') => {
     if (!confirm('WARNING: Exporting in plaintext will expose all your passwords. Make sure you delete the file after use. Continue?')) return
     isExporting.value = true
     exportError.value = null
-
     try {
         const allDbItems = await getAllItems()
+        const fileContent = format === 'json'
+            ? await exportPlaintextJson(allDbItems)
+            : await exportPlaintextCsv(allDbItems)
 
-        const fileContent = format === 'json' ? await exportPlaintextJson(allDbItems) : await exportPlaintextCsv(allDbItems)
-        downloadFile(fileContent, `vault-plaintext-${new Date().toISOString().split('T')[0]}.${format}`, format === 'json' ? 'application/json' : 'text/csv')
-    } catch (error) {
-        exportError.value = (error as Error).message
+        downloadFile(
+            fileContent,
+            `vault-plaintext-${new Date().toISOString().split('T')[0]}.${format}`,
+            format === 'json' ? 'application/json' : 'text/csv'
+        )
+        toast.warning('Plaintext export', 'Delete the file after use')
+    } catch (err) {
+        exportError.value = (err as Error).message
+        toast.error('Export failed', (err as Error).message)
     } finally {
         isExporting.value = false
     }
 }
 
-const doImportPlaintext = async (content: string, filename: string): Promise<void> => {
+const doImportPlaintext = async (content: string, filename: string) => {
     isImporting.value = true
     importError.value = null
     try {
         const payloads = await importPlaintext(content, filename)
         const count = await vault.importPayloads(payloads)
         importSuccess.value = `Successfully imported ${count} items`
+        toast.success('Import complete', `${count} items added to your vault`)
         pendingFileContent.value = null
     } catch (err) {
         importError.value = (err as Error).message
+        toast.error('Import failed', (err as Error).message)
     } finally {
         isImporting.value = false
     }
@@ -247,7 +259,7 @@ const handleFileSelect = async (e: Event) => {
     target.value = ''
 }
 
-const handleDecryptImport = async (): Promise<void> => {
+const handleDecryptImport = async () => {
     if (!importPassword.value) {
         importError.value = 'Please enter the backup password'
         return
@@ -263,11 +275,13 @@ const handleDecryptImport = async (): Promise<void> => {
         const payloads = await importEncryptedBackup(importPassword.value, pendingFileContent.value)
         const count = await vault.importPayloads(payloads)
         importSuccess.value = `Successfully imported ${count} items`
+        toast.success('Backup decrypted', `${count} items restored`)
         isEncryptedFile.value = false
         pendingFileContent.value = null
         importPassword.value = ''
     } catch (err) {
         importError.value = (err as Error).message
+        toast.error('Decryption failed', (err as Error).message)
     } finally {
         isImporting.value = false
     }

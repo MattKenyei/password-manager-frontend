@@ -66,10 +66,6 @@
                     vault cannot be recovered.
                 </div>
 
-                <p v-if="auth.lastError" class="text-sm text-red-600 dark:text-red-400">
-                    {{ auth.lastError }}
-                </p>
-
                 <button type="submit" :disabled="!canSubmit"
                     class="w-full py-2 bg-indigo-600 text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-indigo-700">
                     {{ auth.busy ? 'Creating...' : 'Create account' }}
@@ -92,9 +88,11 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import PasswordStrengthBar from '@/components/PasswordStrengthBar.vue'
 import { generatePassword, DEFAULT_GENERATOR_OPTIONS } from '@/utils/password-generator'
+import { useToastStore } from '@/stores/toast'
 
 const router = useRouter()
 const auth = useAuthStore()
+const toast = useToastStore()
 
 const email = ref('')
 const password = ref('')
@@ -119,7 +117,7 @@ const canSubmit = computed(
         !auth.busy,
 )
 
-const generateMasterPassword = (): void => {
+const generateMasterPassword = () => {
     const pwd = generatePassword({
         ...DEFAULT_GENERATOR_OPTIONS,
         length: 32,
@@ -130,12 +128,14 @@ const generateMasterPassword = (): void => {
     showPassword.value = true
 }
 
-const submit = async (): Promise<void> => {
+const submit = async () => {
     if (!canSubmit.value) return
     try {
         await auth.register(email.value, password.value)
+        toast.success('Account created', 'Welcome to your vault')
         router.push({ name: 'vault' })
-    } catch {
+    } catch (err) {
+        toast.error('Registration failed', (err as Error).message)
     }
 }
 </script>

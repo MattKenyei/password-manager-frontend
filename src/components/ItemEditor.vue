@@ -13,10 +13,11 @@
                     </button>
                 </div>
 
-                <p v-if="error" class="text-sm text-red-600 dark:text-red-400 mb-3">
-                    {{ error }}
-                </p>
+
                 <p v-if="loading" class="text-sm text-gray-500 dark:text-gray-400">Loading…</p>
+                <p v-else-if="!form.title && props.itemId && !loading" class="text-sm text-red-600 dark:text-red-400">
+                    Failed to load item
+                </p>
 
                 <form v-else class="space-y-3" @submit.prevent="submit">
                     <div>
@@ -151,6 +152,7 @@ import { copySensitive } from '@/utils/clipboard'
 import PasswordGenerator from '@/components/PasswordGenerator.vue'
 import type { IItemPayload } from '@/db/types'
 import PasswordStrengthBar from './PasswordStrengthBar.vue'
+import { useToastStore } from '@/stores/toast.ts'
 
 interface Props {
     open: boolean
@@ -164,6 +166,8 @@ const emit = defineEmits<{
     delete: [id: string]
 }>()
 
+const toast = useToastStore()
+
 const form = ref<IItemPayload>(emptyPayload())
 const showPassword = ref(false)
 const loading = ref(false)
@@ -176,7 +180,7 @@ let copiedTimeout: ReturnType<typeof setTimeout> | null = null
 
 const isEditing = computed(() => props.itemId !== null)
 
-const flashCopied = (field: 'username' | 'password' | 'url'): void => {
+const flashCopied = (field: 'username' | 'password' | 'url') => {
     copiedField.value = field
     if (copiedTimeout) clearTimeout(copiedTimeout)
     copiedTimeout = setTimeout(() => {
@@ -184,14 +188,15 @@ const flashCopied = (field: 'username' | 'password' | 'url'): void => {
     }, 1500)
 }
 
-const copy = async (field: 'username' | 'password' | 'url'): Promise<void> => {
+const copy = async (field: 'username' | 'password' | 'url') => {
     const value = form.value[field]
     if (!value) return
     try {
         await copySensitive(value)
         flashCopied(field)
-    } catch (err) {
-        error.value = (err as Error).message
+        toast.success('Copied', 'Cleared from clipboard in 30s')
+    } catch (error) {
+        toast.error('Copy failed', (error as Error).message)
     }
 }
 
@@ -227,11 +232,11 @@ watch(
     { immediate: true },
 )
 
-const submit = (): void => {
+const submit = () => {
     emit('save', { ...form.value, tags: [...form.value.tags] })
 }
 
-const onDelete = (): void => {
+const onDelete = () => {
     if (!props.itemId) return
     if (!confirmingDelete.value) {
         confirmingDelete.value = true
@@ -240,7 +245,7 @@ const onDelete = (): void => {
     emit('delete', props.itemId)
 }
 
-const onGenerated = (password: string): void => {
+const onGenerated = (password: string) => {
     form.value.password = password
     showGenerator.value = false
     showPassword.value = true

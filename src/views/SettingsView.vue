@@ -109,9 +109,11 @@ import { useAuthStore } from '@/stores/auth'
 import ThemeToggle from '@/components/ThemeToggle.vue'
 import type { ISessionSettings } from '@/platform/session-settings'
 import ImportExportModal from '@/components/ImportExportModal.vue'
+import { useToastStore } from '@/stores/toast'
 
 const router = useRouter()
 const auth = useAuthStore()
+const toast = useToastStore()
 
 const settings = computed(() => auth.settings)
 const dirty = ref(false)
@@ -126,13 +128,25 @@ const autoLockOptions = [
     { value: 60, label: '1 hour' },
 ] as const
 
-const update = <K extends keyof ISessionSettings>(key: K, value: ISessionSettings[K]): void => {
-    auth.updateSettings({ [key]: value } as Partial<ISessionSettings>)
-    dirty.value = true
+let savedTimer: ReturnType<typeof setTimeout> | null = null
+
+const notifySaved = () => {
+    if (savedTimer) clearTimeout(savedTimer)
+    savedTimer = setTimeout(() => toast.success('Settings saved'), 800)
 }
 
-const logout = async (): Promise<void> => {
-    await auth.logout()
-    router.push({ name: 'unlock' })
+const update = <K extends keyof ISessionSettings>(key: K, value: ISessionSettings[K]) => {
+    auth.updateSettings({ [key]: value } as Partial<ISessionSettings>)
+    notifySaved()
+}
+
+const logout = async () => {
+    try {
+        await auth.logout()
+        toast.success('Logged out')
+        router.push({ name: 'unlock' })
+    } catch (err) {
+        toast.error('Logout failed', (err as Error).message)
+    }
 }
 </script>

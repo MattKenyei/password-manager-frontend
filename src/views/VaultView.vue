@@ -81,57 +81,73 @@
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { useVaultStore } from '@/stores/vault'
 import { useOnline } from '@/composables/useOnline'
-import { startWs, stopWs } from '@/services/websocket'
 import { triggerSync } from '@/services/sync'
 import ItemEditor from '@/components/ItemEditor.vue'
 import type { IItemPayload } from '@/db/types'
+import { useToastStore } from '@/stores/toast'
 
 const vault = useVaultStore()
 const { isOnline } = useOnline()
+const toast = useToastStore()
 
 const editorOpen = ref(false)
 const editingId = ref<string | null>(null)
 
-const openCreate = (): void => {
+const openCreate = () => {
     editingId.value = null
     editorOpen.value = true
 }
 
-const openEdit = (id: string): void => {
+const openEdit = (id: string) => {
     editingId.value = id
     editorOpen.value = true
 }
 
-const closeEditor = (): void => {
+const closeEditor = () => {
     editorOpen.value = false
     editingId.value = null
 }
 
-const onSave = async (payload: IItemPayload): Promise<void> => {
-    if (editingId.value) {
-        await vault.updateItem(editingId.value, payload)
-    } else {
-        await vault.createItem(payload)
+const onSave = async (payload: IItemPayload) => {
+    try {
+        if (editingId.value) {
+            await vault.updateItem(editingId.value, payload)
+            toast.success('Item updated')
+        } else {
+            await vault.createItem(payload)
+            toast.success('Item created')
+        }
+        closeEditor()
+    } catch (err) {
+        toast.error('Save failed', (err as Error).message)
     }
-    closeEditor()
 }
 
-const onDelete = async (id: string): Promise<void> => {
-    await vault.deleteItem(id)
-    closeEditor()
+const onDelete = async (id: string) => {
+    try {
+        await vault.deleteItem(id)
+        toast.success('Item deleted')
+        closeEditor()
+    } catch (err) {
+        toast.error('Delete failed', (err as Error).message)
+    }
 }
 
-const onSyncClick = (): void => {
-    void vault.sync()
+const onSyncClick = async () => {
+    await vault.sync()
+    if (vault.syncStatus === 'error') {
+        toast.error('Sync failed', 'Check your connection and try again')
+    } else {
+        toast.success('Synced')
+    }
 }
-
-const onFocus = (): void => {
+const onFocus = () => {
     if (document.visibilityState === 'visible' && isOnline.value) {
         void triggerSync()
     }
 }
 
-const onOnline = (): void => {
+const onOnline = () => {
     void triggerSync()
 }
 
@@ -157,13 +173,6 @@ onBeforeUnmount(() => {
     if (periodicId !== null) clearInterval(periodicId)
     vault.unsubscribeSyncStatus()
 })
-
-// watch(
-//     () => vault.syncStatus,
-//     (s) => {
-//         if (s === 'idle') void vault.loadFromDb()
-//     },
-// )
 
 const statusLabel = (): string => {
     if (!isOnline.value) return 'Offline'
