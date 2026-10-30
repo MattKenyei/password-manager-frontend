@@ -41,7 +41,6 @@ export const useAuthStore = defineStore('auth', () => {
 
     const persistTokens = (access: string, refresh: string | null): void => {
         setAccessToken(access)
-        localStorage.setItem(ACCESS_TOKEN_KEY, access)
         if (refresh) {
             if (settings.value.rememberDevice) {
                 localStorage.setItem(REFRESH_TOKEN_KEY, refresh)
@@ -54,7 +53,6 @@ export const useAuthStore = defineStore('auth', () => {
 
     const clearTokens = (): void => {
         setAccessToken(null)
-        localStorage.removeItem(ACCESS_TOKEN_KEY)
         localStorage.removeItem(REFRESH_TOKEN_KEY)
         localStorage.removeItem(USER_EMAIL_KEY)
     }

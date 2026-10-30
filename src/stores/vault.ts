@@ -168,6 +168,39 @@ export const useVaultStore = defineStore('vault', () => {
         await metaRepo.deleteMeta(metaRepo.LAST_SERVER_REVISION_KEY)
     }
 
+    const importPayloads = async (payloads: IItemPayload[]): Promise<number> => {
+        const accountKey = getAccountKey()
+        let count = 0
+
+        for (const payload of payloads) {
+            const id = crypto.randomUUID()
+            const blob = await encryptPayload(accountKey, id, payload)
+
+            const item: DbItem = {
+                id,
+                encrypted_blob: blob,
+                version: 0,
+                deleted: 0,
+                sync_state: 'pending',
+                updated_at: Date.now(),
+            }
+
+            await itemsRepo.putItem(item)
+            await pendingRepo.enqueue({
+                id,
+                base_version: 0,
+                encrypted_blob: blob,
+                deleted: 0,
+            })
+            count++
+        }
+
+        await loadFromDb()
+        void triggerSync()
+
+        return count
+    }
+
     return {
         items,
         filtered,
@@ -182,5 +215,6 @@ export const useVaultStore = defineStore('vault', () => {
         sync,
         reset,
         unsubscribeSyncStatus,
+        importPayloads
     }
 })

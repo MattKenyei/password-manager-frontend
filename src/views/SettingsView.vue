@@ -79,12 +79,27 @@
             </section>
 
             <section class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">Data</h2>
+                <div class="space-y-3">
+                    <p class="text-sm text-gray-600 dark:text-gray-400">
+                        Backup your vault or import passwords from another manager.
+                    </p>
+                    <button
+                        class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                        @click="isImportExportModalOpen = true">
+                        Import / Export
+                    </button>
+                </div>
+            </section>
+
+            <section class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
                 <button class="w-full py-2 bg-red-600 text-white rounded-md hover:bg-red-700" @click="logout">
                     Log out
                 </button>
             </section>
         </main>
     </div>
+    <ImportExportModal :open="isImportExportModalOpen" @close="isImportExportModalOpen = false" />
 </template>
 
 <script setup lang="ts">
@@ -93,12 +108,16 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import ThemeToggle from '@/components/ThemeToggle.vue'
 import type { ISessionSettings } from '@/platform/session-settings'
+import ImportExportModal from '@/components/ImportExportModal.vue'
+import { useToastStore } from '@/stores/toast'
 
 const router = useRouter()
 const auth = useAuthStore()
+const toast = useToastStore()
 
 const settings = computed(() => auth.settings)
 const dirty = ref(false)
+const isImportExportModalOpen = ref(false)
 
 const autoLockOptions = [
     { value: 0, label: 'Never (only on tab close)' },
@@ -109,13 +128,25 @@ const autoLockOptions = [
     { value: 60, label: '1 hour' },
 ] as const
 
-const update = <K extends keyof ISessionSettings>(key: K, value: ISessionSettings[K]): void => {
-    auth.updateSettings({ [key]: value } as Partial<ISessionSettings>)
-    dirty.value = true
+let savedTimer: ReturnType<typeof setTimeout> | null = null
+
+const notifySaved = () => {
+    if (savedTimer) clearTimeout(savedTimer)
+    savedTimer = setTimeout(() => toast.success('Settings saved'), 800)
 }
 
-const logout = async (): Promise<void> => {
-    await auth.logout()
-    router.push({ name: 'unlock' })
+const update = <K extends keyof ISessionSettings>(key: K, value: ISessionSettings[K]) => {
+    auth.updateSettings({ [key]: value } as Partial<ISessionSettings>)
+    notifySaved()
+}
+
+const logout = async () => {
+    try {
+        await auth.logout()
+        toast.success('Logged out')
+        router.push({ name: 'unlock' })
+    } catch (err) {
+        toast.error('Logout failed', (err as Error).message)
+    }
 }
 </script>
