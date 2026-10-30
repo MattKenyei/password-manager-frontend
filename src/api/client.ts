@@ -11,13 +11,17 @@ export const api: AxiosInstance = axios.create({
     }
 })
 
-let accessToken: string | null = null
+let accessToken: string | null = localStorage.getItem('pm.access_token')
 let onUnauthorized: (() => void) | null = null
 
-export const setAccessToken = (token: string | null): void => {
+export function setAccessToken(token: string | null): void {
     accessToken = token
+    if (token) {
+        localStorage.setItem('pm.access_token', token)
+    } else {
+        localStorage.removeItem('pm.access_token')
+    }
 }
-
 export const onAuthFailure = (handler: () => void): void => {
     onUnauthorized = handler
 }

@@ -65,7 +65,7 @@ const canSubmit = computed(
     () => email.value.length > 0 && password.value.length > 0 && !auth.busy,
 )
 
-const submit = async (): Promise<void> => {
+const submit = async () => {
     if (!canSubmit.value) return
     try {
         await auth.login(email.value, password.value)
