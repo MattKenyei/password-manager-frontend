@@ -1,7 +1,9 @@
-import { createRouter, createWebHistory } from "vue-router";
+import { isExtension } from "@/platform/env";
+import { createMemoryHistory, createRouter, createWebHistory } from "vue-router";
 
+const history = isExtension() ? createMemoryHistory() : createWebHistory()
 const router = createRouter({
-    history: createWebHistory(),
+    history,
     routes: [
         {
             path: '/',

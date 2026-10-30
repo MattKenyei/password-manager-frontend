@@ -1,3 +1,5 @@
+import { isExtension } from "./env"
+
 const DEVICE_ID_KEY = 'pm.device_id'
 const DEVICE_NAME_KEY = 'pm.device_name'
 const DEVICE_PLATFORM_KEY = 'pm.device_platform'
@@ -42,6 +44,7 @@ export const setDeviceName = (name: string) => {
 }
 
 export const getDevicePlatform = (): string => {
+    if (isExtension()) return 'extension'
     const saved = localStorage.getItem(DEVICE_PLATFORM_KEY)
     if (saved) return saved
     const p = detectPlatform()
