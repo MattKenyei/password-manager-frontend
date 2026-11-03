@@ -8,12 +8,10 @@ import { onBeforeUnmount, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import ToastContainer from '@/components/ToastContainer.vue'
-import { getCurrentWindow } from '@tauri-apps/api/window'
+import { isTauri } from '@/platform/env'
 
 const auth = useAuthStore()
 const router = useRouter()
-
-const appWindow = getCurrentWindow()
 
 const ACTIVITY_EVENTS: (keyof WindowEventMap)[] = [
   'mousemove',
@@ -42,7 +40,9 @@ let unlistenFocus: (() => void) | null = null
 onMounted(async () => {
   await auth.bootstrap()
 
-  ACTIVITY_EVENTS.forEach((evt) => window.addEventListener(evt, onActivity, { passive: true }))
+  ACTIVITY_EVENTS.forEach((evt) =>
+    window.addEventListener(evt, onActivity, { passive: true }),
+  )
   document.addEventListener('visibilitychange', onVisibilityChange)
 
   lockIntervalId = window.setInterval(() => {
@@ -54,11 +54,18 @@ onMounted(async () => {
     }
   }, 30_000)
 
-  unlistenFocus = await appWindow.onFocusChanged(({ payload: focused }) => {
-    if (!focused && auth.isUnlocked) {
-      auth.lock()
-    }
-  })
+  if (isTauri()) {
+    const { getCurrentWindow } = await import('@tauri-apps/api/window')
+    const appWindow = getCurrentWindow()
+    unlistenFocus = await appWindow.onFocusChanged(({ payload: focused }) => {
+      if (!focused && auth.isUnlocked) {
+        auth.lock()
+        if (router.currentRoute.value.meta.requiresUnlock) {
+          router.push({ name: 'unlock', query: { reason: 'blur' } })
+        }
+      }
+    })
+  }
 })
 
 onBeforeUnmount(() => {
