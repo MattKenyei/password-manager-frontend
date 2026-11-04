@@ -93,7 +93,8 @@
             </section>
 
             <section class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-                <button class="w-full py-2 bg-red-600 text-white rounded-md hover:bg-red-700" @click="logout">
+                <button class="w-full py-2 bg-red-600 text-white rounded-md hover:bg-red-700" data-testid="logout"
+                    @click="logout">
                     Log out
                 </button>
             </section>

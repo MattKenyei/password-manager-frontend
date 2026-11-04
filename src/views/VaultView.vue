@@ -23,7 +23,7 @@
                         Sync
                     </button>
 
-                    <RouterLink to="/settings"
+                    <RouterLink to="/settings" data-testid="nav-settings"
                         class="px-3 py-1.5 text-sm rounded-md border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
                         Settings
                     </RouterLink>
@@ -35,7 +35,8 @@
             <div class="mb-4 flex items-center gap-2">
                 <input v-model="vault.searchQuery" type="search" placeholder="Search by title, username, url, tag…"
                     class="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100" />
-                <button class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700" @click="openCreate">
+                <button class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700" data-testid="new-item"
+                    @click="openCreate">
                     + New
                 </button>
             </div>
