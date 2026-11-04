@@ -37,5 +37,19 @@ export default defineConfig(({ mode }) => {
           '/ws': { target: 'ws://localhost:8080', ws: true },
         },
       },
+
+    test: {
+      environment: 'jsdom',
+      globals: true,
+      setupFiles: ['./src/test/setup.ts'],
+      include: ['src/**/*.{test,spec}.ts'],
+      exclude: ['node_modules', 'dist', 'dist-extension', 'e2e'],
+      coverage: {
+        provider: 'v8',
+        reporter: ['text', 'html'],
+        include: ['src/crypto/**', 'src/utils/**'],
+        exclude: ['**/*.test.ts', '**/*.worker.ts'],
+      },
+    },
   }
 })

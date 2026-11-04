@@ -29,27 +29,31 @@ const pick = (chars: string): string => {
 
 export const generatePassword = (opts: IGeneratorOptions = DEFAULT_GENERATOR_OPTIONS): string => {
     const filterAmbiguous = (s: string): string => {
-        if (opts.avoidAmbiguous) return s
-        return [...s].filter(c => !AMBIGUOUS.includes(c)).join('')
+        if (!opts.avoidAmbiguous) return s
+        return [...s].filter((c) => !AMBIGUOUS.includes(c)).join('')
     }
 
+    // Apply filter to EVERY group
     const groups: string[] = []
     if (opts.useLowercase) groups.push(filterAmbiguous(LOWERCASE))
     if (opts.useUppercase) groups.push(filterAmbiguous(UPPERCASE))
     if (opts.useDigits) groups.push(filterAmbiguous(DIGITS))
-    if (opts.useSymbols) groups.push(SYMBOLS)
+    if (opts.useSymbols) groups.push(filterAmbiguous(SYMBOLS))
 
-    const nonEmpty = groups.filter(g => g.length > 0)
-    if (nonEmpty.length === 0)
+    const nonEmpty = groups.filter((g) => g.length > 0)
+    if (nonEmpty.length === 0) {
         throw new Error('at least one character class must be selected')
+    }
+
     const pool = nonEmpty.join('')
     const length = Math.max(opts.length, nonEmpty.length)
 
-    const required = nonEmpty.map(g => pick(g))
+    const required = nonEmpty.map((g) => pick(g))
 
     const rest: string[] = []
-    for (let i = required.length; i < length; i++)
+    for (let i = required.length; i < length; i++) {
         rest.push(pick(pool))
+    }
 
     const all = [...required, ...rest]
     for (let i = all.length - 1; i > 0; i--) {
@@ -62,7 +66,11 @@ export const generatePassword = (opts: IGeneratorOptions = DEFAULT_GENERATOR_OPT
 }
 
 export const estimateEntropy = (opts: IGeneratorOptions): number => {
-    const classes = (opts.useLowercase ? 26 : 0) + (opts.useUppercase ? 26 : 0) + (opts.useDigits ? 10 : 0) + (opts.useSymbols ? SYMBOLS.length : 0)
+    const classes =
+        (opts.useLowercase ? 26 : 0) +
+        (opts.useUppercase ? 26 : 0) +
+        (opts.useDigits ? 10 : 0) +
+        (opts.useSymbols ? SYMBOLS.length : 0)
 
     if (classes === 0) return 0
     return Math.floor(opts.length * Math.log2(classes))

@@ -27,6 +27,10 @@ env
 .env.local
 .env.*.local
 
+coverage/
+playwright-report/
+test-results/
+
 # OS
 .DS_Store
 Thumbs.db
