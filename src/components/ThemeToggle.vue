@@ -1,6 +1,6 @@
 <template>
     <div class="inline-flex rounded-md border border-gray-300 dark:border-gray-600 overflow-hidden">
-        <button v-for="opt in options" :key="opt.value" type="button"
+        <button v-for="opt in options" :key="opt.value" type="button" :data-testid="`theme-${opt.value}`"
             class="px-3 py-1.5 text-sm transition-colors flex items-center gap-1.5" :class="theme.mode === opt.value
                 ? 'bg-indigo-600 text-white'
                 : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
