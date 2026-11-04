@@ -58,7 +58,7 @@ jobs:
         with:
           go-version: "1.27"
 
-            - name: Run backend
+      - name: Run backend
         working-directory: backend
         env:
           POSTGRES_HOST: localhost
