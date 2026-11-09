@@ -124,6 +124,7 @@
 </template>
 
 <script setup lang="ts">
+import { humanizeApiError } from '@/api/client';
 import { getAllItems } from '@/db/items-repo';
 import { useToastStore } from '@/stores/toast';
 import { useVaultStore } from '@/stores/vault';
@@ -182,8 +183,9 @@ const handleExportEncrypted = async () => {
         downloadFile(fileContent, `vault-backup-${new Date().toISOString().split('T')[0]}.json`, 'application/json')
         toast.success('Backup exported', 'Encrypted backup downloaded')
     } catch (err) {
-        exportError.value = (err as Error).message
-        toast.error('Export failed', (err as Error).message)
+        const msg = humanizeApiError(err)
+        exportError.value = msg
+        toast.error('Export failed', msg)
     } finally {
         isExporting.value = false
         backupPassword.value = ''
@@ -207,8 +209,9 @@ const handleExportPlaintext = async (format: 'json' | 'csv') => {
         )
         toast.warning('Plaintext export', 'Delete the file after use')
     } catch (err) {
-        exportError.value = (err as Error).message
-        toast.error('Export failed', (err as Error).message)
+        const msg = humanizeApiError(err)
+        exportError.value = msg
+        toast.error('Export failed', msg)
     } finally {
         isExporting.value = false
     }
@@ -224,8 +227,9 @@ const doImportPlaintext = async (content: string, filename: string) => {
         toast.success('Import complete', `${count} items added to your vault`)
         pendingFileContent.value = null
     } catch (err) {
-        importError.value = (err as Error).message
-        toast.error('Import failed', (err as Error).message)
+        const msg = humanizeApiError(err)
+        importError.value = msg
+        toast.error('Import failed', msg)
     } finally {
         isImporting.value = false
     }
@@ -280,8 +284,9 @@ const handleDecryptImport = async () => {
         pendingFileContent.value = null
         importPassword.value = ''
     } catch (err) {
-        importError.value = (err as Error).message
-        toast.error('Decryption failed', (err as Error).message)
+        const msg = humanizeApiError(err)
+        importError.value = msg
+        toast.error('Decryption failed', msg)
     } finally {
         isImporting.value = false
     }
