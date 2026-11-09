@@ -72,23 +72,6 @@ const canSubmit = computed(
     () => email.value.length > 0 && password.value.length > 0 && !auth.busy,
 )
 
-
-const promptEnableBiometric = async () => {
-    if (!auth.biometricAvailable || auth.biometricEnabled) return
-
-    const shouldEnable = window.confirm(
-        "Enable fingerprint unlock? You'll still need your master password occasionally.",
-    )
-    if (!shouldEnable) return
-
-    try {
-        await auth.enableBiometricUnlock()
-        toast.success('Fingerprint unlock enabled')
-    } catch (err) {
-        console.warn('[biometric] enable failed:', err)
-    }
-}
-
 const submit = async () => {
     if (!canSubmit.value) return
     try {
