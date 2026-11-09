@@ -1,6 +1,6 @@
 export const isTauri = (): boolean => typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window
 
-export const isCapicator = (): boolean => typeof window !== 'undefined' && 'Capicator' in window
+export const isCapacitor = (): boolean => typeof window !== 'undefined' && 'Capicator' in window
 
 export const isExtension = (): boolean => {
     return (
@@ -10,9 +10,17 @@ export const isExtension = (): boolean => {
     )
 }
 
-export const platform = (): 'web' | 'tauri' | 'capicator' | 'extiension' => {
+export const isAndroid = (): boolean =>
+    isCapacitor() && (window as any).Capacitor.getPlatform() === 'android'
+
+export const isIOS = (): boolean =>
+    isCapacitor() && (window as any).Capacitor.getPlatform() === 'ios'
+
+export const platform = (): 'web' | 'tauri' | 'capicator' | 'extiension' | 'android' | 'ios' => {
     if (isTauri()) return 'tauri'
-    if (isCapicator()) return 'capicator'
+    if (isCapacitor()) return 'capicator'
     if (isExtension()) return 'extiension'
+    if (isAndroid()) return 'android'
+    if (isIOS()) return 'ios'
     return 'web'
 }

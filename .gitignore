@@ -34,3 +34,10 @@ test-results/
 # OS
 .DS_Store
 Thumbs.db
+
+android/.gradle/
+android/app/build/
+android/build/
+android/local.properties
+android/.idea/
+android/capacitor-cordova-android-plugins/

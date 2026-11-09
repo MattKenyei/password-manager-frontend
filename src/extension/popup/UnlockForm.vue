@@ -23,7 +23,7 @@ import { computed, ref } from 'vue'
 import { send, type IUnlockStartData } from '../shared/messages'
 import { base64ToBytes, bytesToBase64 } from '@/crypto/base64'
 import { deriveKeySync } from '@/crypto/argon2-sync'
-import { decrypt, encrypt } from '@/crypto/cipher'
+import { decrypt } from '@/crypto/cipher'
 import * as authApi from '@/api/auth'
 import { getDeviceID } from '@/platform/device'
 
