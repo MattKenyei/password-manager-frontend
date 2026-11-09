@@ -57,6 +57,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useToastStore } from '@/stores/toast'
+import { humanizeApiError } from '@/api/client'
 
 const router = useRouter()
 const route = useRoute()
@@ -93,13 +94,10 @@ const submit = async () => {
     try {
         await auth.login(email.value, password.value)
         toast.success('Vault unlocked')
-
-        await promptEnableBiometric()
-
         const redirect = (route.query.redirect as string) || '/vault'
         router.push(redirect)
     } catch (err) {
-        toast.error('Unlock failed', (err as Error).message || 'Invalid email or password')
+        toast.error('Unlock failed', humanizeApiError(err))
     }
 }
 

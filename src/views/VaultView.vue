@@ -86,6 +86,7 @@ import { triggerSync } from '@/services/sync'
 import ItemEditor from '@/components/ItemEditor.vue'
 import type { IItemPayload } from '@/db/types'
 import { useToastStore } from '@/stores/toast'
+import { humanizeApiError } from '@/api/client'
 
 const vault = useVaultStore()
 const { isOnline } = useOnline()
@@ -120,7 +121,7 @@ const onSave = async (payload: IItemPayload) => {
         }
         closeEditor()
     } catch (err) {
-        toast.error('Save failed', (err as Error).message)
+        toast.error('Save failed', humanizeApiError(err))
     }
 }
 
@@ -130,7 +131,7 @@ const onDelete = async (id: string) => {
         toast.success('Item deleted')
         closeEditor()
     } catch (err) {
-        toast.error('Delete failed', (err as Error).message)
+        toast.error('Delete failed', humanizeApiError(err))
     }
 }
 

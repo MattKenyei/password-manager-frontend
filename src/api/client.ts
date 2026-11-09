@@ -47,6 +47,70 @@ export function setAccessToken(token: string | null): void {
     }
 }
 
+export const humanizeApiError = (err: unknown): string => {
+    // 1. Network down
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        return 'No internet connection'
+    }
+
+    const axiosErr = err as AxiosError<ApiError>
+
+    // 2. Server sent {error, message} — use message
+    if (axiosErr.response?.data?.message) {
+        return axiosErr.response.data.message
+    }
+
+    // 3. Server sent {error} only — map known codes
+    if (axiosErr.response?.data?.error) {
+        switch (axiosErr.response.data.error) {
+            case 'invalid_credentials':
+                return 'Invalid email or password'
+            case 'email_exists':
+                return 'This email is already registered'
+            case 'validation_failed':
+                return 'Please check the form and try again'
+            case 'rate_limited':
+                return 'Too many attempts. Try again in a minute.'
+            case 'unauthorized':
+                return 'Session expired. Please sign in again.'
+            case 'invalid_refresh_token':
+                return 'Session expired. Please sign in again.'
+            case 'device_not_found':
+                return 'Device not found'
+            case 'internal_error':
+                return 'Server error. Please try again later.'
+            default:
+                return axiosErr.response.data.error
+        }
+    }
+
+    // 4. Response without JSON format — by HTTP status
+    if (!axiosErr.response) {
+        return 'Cannot reach server. Check your connection.'
+    }
+
+    switch (axiosErr.response.status) {
+        case 400:
+            return 'Invalid request'
+        case 401:
+            return 'Invalid email or password'
+        case 403:
+            return 'Access denied'
+        case 404:
+            return 'Not found'
+        case 409:
+            return 'Conflict — please refresh the page'
+        case 429:
+            return 'Too many requests. Try again in a minute.'
+        case 500:
+        case 502:
+        case 503:
+            return 'Server error. Please try again later.'
+        default:
+            return `Request failed (${axiosErr.response.status})`
+    }
+}
+
 export const onAuthFailure = (handler: () => void): void => {
     onUnauthorized = handler
 }
