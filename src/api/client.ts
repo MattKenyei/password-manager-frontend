@@ -1,6 +1,7 @@
 import type { AxiosError, AxiosInstance } from "axios"
 import axios from "axios"
 import type { ApiError } from "./types"
+import { isCapacitor } from "@/platform/env"
 
 
 const chromeRuntime = (globalThis as any).chrome?.runtime
@@ -12,7 +13,9 @@ const isExtensionContext =
 
 const BASE_URL = isExtensionContext
     ? 'http://localhost:8080'
-    : import.meta.env.VITE_API_URL || '/api'
+    : isCapacitor()
+        ? (import.meta.env.VITE_API_URL || 'http://10.0.2.2:8080')
+        : (import.meta.env.VITE_API_URL || '/api')
 
 console.log('[client] init', {
     BASE_URL,

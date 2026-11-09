@@ -15,8 +15,10 @@ import {
 } from '@/platform/session-settings'
 import { startWs, stopWs, updateToken } from '@/services/websocket'
 import { triggerSync } from '@/services/sync'
+import { isCapacitor } from '@/platform/env'
+import { checkBiometricAvailable, promptBiometric } from '@/platform/biometric'
+import { deleteAccountKeyFromKeychain, isBiometricEnabled, loadAccountKeyFromKeychain, saveAccountKeyToKeychain, setBiometricEnabled } from '@/platform/storage.capacitor'
 
-const ACCESS_TOKEN_KEY = 'pm.access_token'
 const REFRESH_TOKEN_KEY = 'pm.refresh_token'
 const USER_EMAIL_KEY = 'pm.user_email'
 
@@ -38,6 +40,10 @@ export const useAuthStore = defineStore('auth', () => {
 
     const isAuthenticated = computed(() => isUnlocked.value)
     const autoLockMs = computed(() => settings.value.autoLockMinutes * 60_000)
+
+    const biometricAvailable = ref(false)
+    const biometricEnabled = ref(false)
+
 
     const persistTokens = (access: string, refresh: string | null): void => {
         setAccessToken(access)
@@ -72,7 +78,7 @@ export const useAuthStore = defineStore('auth', () => {
         }
     }
 
-    const register = async (userEmail: string, masterPassword: string): Promise<void> => {
+    const register = async (userEmail: string, masterPassword: string) => {
         busy.value = true
         lastError.value = null
 
@@ -126,7 +132,7 @@ export const useAuthStore = defineStore('auth', () => {
         userEmail: string,
         authKey: Uint8Array,
         accountKey: Uint8Array,
-    ): Promise<void> => {
+    ) => {
         const resp = await authApi.loginFinish({
             email: userEmail,
             auth_key: bytesToBase64(authKey),
@@ -139,6 +145,15 @@ export const useAuthStore = defineStore('auth', () => {
         localStorage.setItem(USER_EMAIL_KEY, userEmail)
         email.value = userEmail
 
+
+        if (!resp.wrapped_account_key) {
+            console.error('[auth] loginFinish response missing wrapped_account_key:', resp)
+            throw new Error(
+                `Server response is missing wrapped_account_key. ` +
+                `Check that the backend is reachable at ${import.meta.env.VITE_API_URL || 'http://10.0.2.2:8080'}. ` +
+                `Raw response: ${JSON.stringify(resp)}`
+            )
+        }
         session.setAccountKey(accountKey)
         session.setWrappedAccountKey(base64ToBytes(resp.wrapped_account_key))
 
@@ -148,7 +163,7 @@ export const useAuthStore = defineStore('auth', () => {
         startWs(accessToken, () => { void triggerSync() })
     }
 
-    const login = async (userEmail: string, masterPassword: string): Promise<void> => {
+    const login = async (userEmail: string, masterPassword: string) => {
         busy.value = true
         lastError.value = null
         try {
@@ -201,7 +216,7 @@ export const useAuthStore = defineStore('auth', () => {
         }
     }
 
-    const logout = async (): Promise<void> => {
+    const logout = async () => {
         const refresh = getStoredRefresh()
         if (refresh) {
             try {
@@ -210,6 +225,9 @@ export const useAuthStore = defineStore('auth', () => {
             }
         }
         lock()
+        await deleteAccountKeyFromKeychain()
+        await setBiometricEnabled(false)
+        biometricEnabled.value = false
         clearTokens()
         email.value = null
     }
@@ -241,7 +259,7 @@ export const useAuthStore = defineStore('auth', () => {
         saveSessionSettings(settings.value)
     }
 
-    const bootstrap = async (): Promise<void> => {
+    const bootstrap = async () => {
         const storedEmail = localStorage.getItem(USER_EMAIL_KEY)
         if (storedEmail) email.value = storedEmail
 
@@ -256,6 +274,52 @@ export const useAuthStore = defineStore('auth', () => {
         if (!ok) lock()
     })
 
+    const initBiometric = async () => {
+        if (!isCapacitor()) return
+        const availability = await checkBiometricAvailable()
+        biometricAvailable.value = availability.available
+        if (availability.available) {
+            biometricEnabled.value = await isBiometricEnabled()
+        }
+    }
+
+    const enableBiometricUnlock = async () => {
+        if (!isCapacitor() || !biometricAvailable.value) {
+            throw new Error('biometric not available')
+        }
+        const accountKey = session.getAccountKey()
+        await saveAccountKeyToKeychain(accountKey)
+        await setBiometricEnabled(true)
+        biometricEnabled.value = true
+    }
+
+    const disableBiometricUnlock = async () => {
+        await setBiometricEnabled(false)
+        biometricEnabled.value = false
+    }
+
+    const unlockWithBiometric = async () => {
+        if (!biometricEnabled.value) {
+            throw new Error('biometric unlock is not enabled')
+        }
+        const ok = await promptBiometric('Unlock your vault')
+        if (!ok) throw new Error('biometric authentication failed')
+
+        const accountKey = await loadAccountKeyFromKeychain()
+        if (!accountKey) {
+            throw new Error('no stored key — please log in with master password')
+        }
+
+        session.setAccountKey(accountKey)
+        isUnlocked.value = true
+        touchActivity()
+
+        const accessToken = localStorage.getItem('pm.access_token')
+        if (accessToken) {
+            startWs(accessToken, () => { void triggerSync() })
+        }
+    }
+
     return {
         isUnlocked,
         isAuthenticated,
@@ -263,6 +327,8 @@ export const useAuthStore = defineStore('auth', () => {
         settings,
         busy,
         lastError,
+        biometricAvailable,
+        biometricEnabled,
 
         register,
         login,
@@ -274,5 +340,9 @@ export const useAuthStore = defineStore('auth', () => {
         resetSettings,
         bootstrap,
         refreshAccessToken,
+        initBiometric,
+        enableBiometricUnlock,
+        disableBiometricUnlock,
+        unlockWithBiometric
     }
 })

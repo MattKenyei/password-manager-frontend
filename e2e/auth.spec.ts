@@ -1,9 +1,9 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, Page } from '@playwright/test'
 
 const uniqueEmail = () => `e2e-${Date.now()}-${Math.random().toString(36).slice(2)}@example.com`
 const MASTER_PASSWORD = 'test-master-password-123'
 
-const register = async (page, email: string): Promise<void> => {
+const register = async (page: Page, email: string): Promise<void> => {
     await page.goto('/register')
     await page.locator('input[type="email"]').fill(email)
     await page.locator('input[autocomplete="new-password"]').first().fill(MASTER_PASSWORD)
@@ -12,7 +12,7 @@ const register = async (page, email: string): Promise<void> => {
     await expect(page).toHaveURL(/\/vault/, { timeout: 15_000 })
 }
 
-const createItem = async (page, title: string): Promise<void> => {
+const createItem = async (page: Page, title: string): Promise<void> => {
     await page.getByTestId('new-item').click()
     await page.getByTestId('item-title').fill(title)
     await page.getByTestId('item-save').click()

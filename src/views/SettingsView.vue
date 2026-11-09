@@ -117,7 +117,7 @@ const auth = useAuthStore()
 const toast = useToastStore()
 
 const settings = computed(() => auth.settings)
-const dirty = ref(false)
+
 const isImportExportModalOpen = ref(false)
 
 const autoLockOptions = [

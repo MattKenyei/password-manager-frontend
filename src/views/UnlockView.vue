@@ -29,10 +29,16 @@
                     </div>
                 </div>
 
-
                 <button type="submit" :disabled="!canSubmit"
                     class="w-full py-2 bg-indigo-600 text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-indigo-700">
                     {{ auth.busy ? 'Unlocking...' : 'Unlock' }}
+                </button>
+
+                <!-- Кнопка биометрии — внутри карточки, под формой -->
+                <button v-if="auth.biometricAvailable && auth.biometricEnabled" type="button"
+                    class="w-full py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center justify-center gap-2"
+                    @click="tryBiometric">
+                    <span>🔒</span> Unlock with fingerprint
                 </button>
 
                 <p class="text-sm text-center text-gray-600 dark:text-gray-400">
@@ -47,7 +53,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useToastStore } from '@/stores/toast'
@@ -65,15 +71,53 @@ const canSubmit = computed(
     () => email.value.length > 0 && password.value.length > 0 && !auth.busy,
 )
 
+
+const promptEnableBiometric = async () => {
+    if (!auth.biometricAvailable || auth.biometricEnabled) return
+
+    const shouldEnable = window.confirm(
+        "Enable fingerprint unlock? You'll still need your master password occasionally.",
+    )
+    if (!shouldEnable) return
+
+    try {
+        await auth.enableBiometricUnlock()
+        toast.success('Fingerprint unlock enabled')
+    } catch (err) {
+        console.warn('[biometric] enable failed:', err)
+    }
+}
+
 const submit = async () => {
     if (!canSubmit.value) return
     try {
         await auth.login(email.value, password.value)
         toast.success('Vault unlocked')
+
+        await promptEnableBiometric()
+
         const redirect = (route.query.redirect as string) || '/vault'
         router.push(redirect)
     } catch (err) {
         toast.error('Unlock failed', (err as Error).message || 'Invalid email or password')
     }
 }
+
+const tryBiometric = async () => {
+    try {
+        await auth.unlockWithBiometric()
+        toast.success('Unlocked')
+        router.push('/vault')
+    } catch (err) {
+        const message = (err as Error).message
+        if (!message.includes('authentication failed')) {
+            toast.error('Biometric unlock failed', message)
+        }
+    }
+}
+
+onMounted(async () => {
+    await auth.initBiometric()
+})
+
 </script>
