@@ -188,6 +188,7 @@ import PasswordStrengthBar from './PasswordStrengthBar.vue'
 import { useToastStore } from '@/stores/toast.ts'
 import { DEFAULT_TOTP, isValidBase32Secret, parseOtpauthUri } from '@/utils/totp.ts'
 import TotpDisplay from './TotpDisplay.vue'
+import { humanizeApiError } from '@/api/client.ts'
 
 interface Props {
     open: boolean
@@ -233,8 +234,8 @@ const copy = async (field: 'username' | 'password' | 'url') => {
         await copySensitive(value)
         flashCopied(field)
         toast.success('Copied', 'Cleared from clipboard in 30s')
-    } catch (error) {
-        toast.error('Copy failed', (error as Error).message)
+    } catch (err) {
+        toast.error('Copy failed', humanizeApiError(err))
     }
 }
 

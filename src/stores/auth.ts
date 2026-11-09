@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import * as authApi from '@/api/auth'
-import { extractApiError, onAuthFailure, setAccessToken } from '@/api/client'
+import { humanizeApiError, onAuthFailure, setAccessToken } from '@/api/client'
 import { base64ToBytes, bytesToBase64 } from '@/crypto/base64'
 import { decrypt, encrypt } from '@/crypto/cipher'
 import { DEFAULT_KDF_PARAMS, deriveKey } from '@/crypto/argon2'
@@ -119,8 +119,7 @@ export const useAuthStore = defineStore('auth', () => {
 
             await loginFinish(userEmail, authKey, accountKey)
         } catch (err) {
-            const apiErr = extractApiError(err)
-            lastError.value = apiErr?.message ?? (err as Error).message
+            lastError.value = humanizeApiError(err)
             throw err
         } finally {
             if (authKey) authKey.fill(0)
@@ -208,8 +207,7 @@ export const useAuthStore = defineStore('auth', () => {
                 authKey.fill(0)
             }
         } catch (err) {
-            const apiErr = extractApiError(err)
-            lastError.value = apiErr?.message ?? (err as Error).message
+            lastError.value = humanizeApiError(err)
             throw err
         } finally {
             busy.value = false

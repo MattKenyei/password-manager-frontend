@@ -89,6 +89,7 @@ import { useAuthStore } from '@/stores/auth'
 import PasswordStrengthBar from '@/components/PasswordStrengthBar.vue'
 import { generatePassword, DEFAULT_GENERATOR_OPTIONS } from '@/utils/password-generator'
 import { useToastStore } from '@/stores/toast'
+import { humanizeApiError } from '@/api/client'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -135,7 +136,7 @@ const submit = async () => {
         toast.success('Account created', 'Welcome to your vault')
         router.push({ name: 'vault' })
     } catch (err) {
-        toast.error('Registration failed', (err as Error).message)
+        toast.error('Registration failed', humanizeApiError(err))
     }
 }
 </script>
