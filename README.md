@@ -4,7 +4,7 @@ Zero-knowledge password manager. One Vue 3 codebase, four platforms: web, deskto
 
 Server never sees your master password or decrypted data.
 
-**Live demo:** https://password-manager-6y7.pages.dev
+**Live demo:** https://password-manager-frontend.mattkenyei.workers.dev
 **Backend:** https://github.com/MattKenyei/password-manager-backend
 **API docs:** https://github.com/MattKenyei/password-manager-backend/blob/dev/docs/API.md
 
