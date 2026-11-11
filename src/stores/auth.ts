@@ -18,6 +18,7 @@ import { triggerSync } from '@/services/sync'
 import { isCapacitor } from '@/platform/env'
 import { checkBiometricAvailable, promptBiometric } from '@/platform/biometric'
 import { deleteAccountKeyFromKeychain, isBiometricEnabled, loadAccountKeyFromKeychain, saveAccountKeyToKeychain, setBiometricEnabled } from '@/platform/storage.capacitor'
+import { deriveRecoveryKey, generateRecoveryCode, recoveryCodeToBase32 } from '@/crypto/recovery'
 
 const REFRESH_TOKEN_KEY = 'pm.refresh_token'
 const USER_EMAIL_KEY = 'pm.user_email'
@@ -45,7 +46,7 @@ export const useAuthStore = defineStore('auth', () => {
     const biometricEnabled = ref(false)
 
 
-    const persistTokens = (access: string, refresh: string | null): void => {
+    const persistTokens = (access: string, refresh: string | null) => {
         setAccessToken(access)
         if (refresh) {
             if (settings.value.rememberDevice) {
@@ -57,7 +58,7 @@ export const useAuthStore = defineStore('auth', () => {
         updateToken(access)
     }
 
-    const clearTokens = (): void => {
+    const clearTokens = () => {
         setAccessToken(null)
         localStorage.removeItem(REFRESH_TOKEN_KEY)
         localStorage.removeItem(USER_EMAIL_KEY)
@@ -78,7 +79,7 @@ export const useAuthStore = defineStore('auth', () => {
         }
     }
 
-    const register = async (userEmail: string, masterPassword: string) => {
+    const register = async (userEmail: string, masterPassword: string): Promise<string> => {
         busy.value = true
         lastError.value = null
 
@@ -95,9 +96,14 @@ export const useAuthStore = defineStore('auth', () => {
             authKey = derivedAuthKey
 
             const accountKey = crypto.getRandomValues(new Uint8Array(32))
-            const wrapped = await encrypt(masterKey, accountKey)
 
+            const wrappedMaster = await encrypt(masterKey, accountKey)
             masterKey.fill(0)
+
+            const recoveryCode = generateRecoveryCode()
+            const recoveryKey = await deriveRecoveryKey(recoveryCode)
+            const wrappedRecovery = await encrypt(recoveryKey, accountKey)
+            recoveryKey.fill(0)
 
             await authApi.register({
                 email: userEmail,
@@ -114,10 +120,15 @@ export const useAuthStore = defineStore('auth', () => {
                         }),
                     ),
                 ),
-                wrapped_account_key: bytesToBase64(wrapped),
+                wrapped_keys: [
+                    { kind: 'master', wrapped_blob: bytesToBase64(wrappedMaster) },
+                    { kind: 'recovery', wrapped_blob: bytesToBase64(wrappedRecovery) },
+                ],
             })
 
             await loginFinish(userEmail, authKey, accountKey)
+
+            return recoveryCodeToBase32(recoveryCode)
         } catch (err) {
             lastError.value = humanizeApiError(err)
             throw err
@@ -144,17 +155,30 @@ export const useAuthStore = defineStore('auth', () => {
         localStorage.setItem(USER_EMAIL_KEY, userEmail)
         email.value = userEmail
 
+        let wrappedMasterB64: string | undefined
 
-        if (!resp.wrapped_account_key) {
-            console.error('[auth] loginFinish response missing wrapped_account_key:', resp)
+        if (resp.wrapped_keys && resp.wrapped_keys.length > 0) {
+            const master = resp.wrapped_keys.find((k) => k.kind === 'master')
+            if (!master) {
+                console.error('[auth] wrapped_keys[] missing master kind:', resp)
+                throw new Error('Server response is missing master wrapped key')
+            }
+            wrappedMasterB64 = master.wrapped_blob
+        } else if (resp.wrapped_account_key) {
+            wrappedMasterB64 = resp.wrapped_account_key
+        }
+
+        if (!wrappedMasterB64) {
+            console.error('[auth] loginFinish: no wrapped key in response:', resp)
             throw new Error(
-                `Server response is missing wrapped_account_key. ` +
+                `Server response is missing wrapped keys. ` +
                 `Check that the backend is reachable at ${import.meta.env.VITE_API_URL || 'http://10.0.2.2:8080'}. ` +
-                `Raw response: ${JSON.stringify(resp)}`
+                `Raw response: ${JSON.stringify(resp)}`,
             )
         }
+
         session.setAccountKey(accountKey)
-        session.setWrappedAccountKey(base64ToBytes(resp.wrapped_account_key))
+        session.setWrappedAccountKey(base64ToBytes(wrappedMasterB64))
 
         isUnlocked.value = true
         const accessToken = localStorage.getItem('pm.access_token') ?? ''
@@ -184,7 +208,19 @@ export const useAuthStore = defineStore('auth', () => {
                     device_platform: getDevicePlatform(),
                 })
 
-                const wrapped = base64ToBytes(resp.wrapped_account_key)
+                let wrappedMasterB64: string | undefined
+                if (resp.wrapped_keys && resp.wrapped_keys.length > 0) {
+                    const master = resp.wrapped_keys.find((k) => k.kind === 'master')
+                    if (!master) throw new Error('Server response is missing master wrapped key')
+                    wrappedMasterB64 = master.wrapped_blob
+                } else if (resp.wrapped_account_key) {
+                    wrappedMasterB64 = resp.wrapped_account_key
+                }
+                if (!wrappedMasterB64) {
+                    throw new Error('Server response is missing wrapped keys')
+                }
+
+                const wrapped = base64ToBytes(wrappedMasterB64)
                 const accountKey = await decrypt(masterKey, wrapped)
 
                 persistTokens(resp.access_token, resp.refresh_token)
@@ -230,14 +266,14 @@ export const useAuthStore = defineStore('auth', () => {
         email.value = null
     }
 
-    const lock = (): void => {
+    const lock = () => {
         session.lock()
         isUnlocked.value = false
         stopWs()
         setAccessToken(null)
     }
 
-    const touchActivity = (): void => {
+    const touchActivity = () => {
         lastActivityAt.value = Date.now()
     }
 
@@ -247,12 +283,12 @@ export const useAuthStore = defineStore('auth', () => {
         return Date.now() - lastActivityAt.value >= autoLockMs.value
     }
 
-    const updateSettings = (patch: Partial<ISessionSettings>): void => {
+    const updateSettings = (patch: Partial<ISessionSettings>) => {
         settings.value = { ...settings.value, ...patch }
         saveSessionSettings(settings.value)
     }
 
-    const resetSettings = (): void => {
+    const resetSettings = () => {
         settings.value = { ...DEFAULT_SESSION_SETTINGS }
         saveSessionSettings(settings.value)
     }

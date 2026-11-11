@@ -1,11 +1,17 @@
+export interface WrappedKeyDTO {
+    kind: 'master' | 'recovery' | 'passkey'
+    wrapped_blob: string
+}
+
 export interface RegisterRequest {
     email: string
     auth_key: string
     auth_salt: string
     enc_salt: string
     kdf_params: string
-    wrapped_account_key: string
+    wrapped_keys: WrappedKeyDTO[]
 }
+
 
 export interface RegisterResponse {
     id: string
@@ -35,7 +41,8 @@ export interface LoginFinishResponse {
     access_token: string
     refresh_token: string
     expires_in: number
-    wrapped_account_key: string
+    wrapped_keys: WrappedKeyDTO[]
+    wrapped_account_key?: string
 }
 
 export interface RefreshRequest {
