@@ -7,7 +7,7 @@ export const generateRecoveryCode = (): Uint8Array => {
 
 export const deriveRecoveryKey = async (code: Uint8Array): Promise<Uint8Array> => {
     if (code.length !== 32) throw new Error('recovery code must be 32 bytes')
-    const baseKey = await crypto.subtle.importKey('raw', code, 'HKDF', false, ['deriveBits'])
+    const baseKey = await crypto.subtle.importKey('raw', code as unknown as BufferSource, 'HKDF', false, ['deriveBits'])
     const bits = await crypto.subtle.deriveBits(
         { name: 'HKDF', hash: 'SHA-256', salt: new Uint8Array(0), info: RECOVERY_INFO },
         baseKey,
