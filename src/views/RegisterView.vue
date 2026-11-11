@@ -80,6 +80,7 @@
             </form>
         </div>
     </div>
+    <RecoveryCodeModal v-if="recoveryCode" :code="recoveryCode" @confirmed="onRecoveryConfirmed" />
 </template>
 
 <script setup lang="ts">
@@ -90,6 +91,7 @@ import PasswordStrengthBar from '@/components/PasswordStrengthBar.vue'
 import { generatePassword, DEFAULT_GENERATOR_OPTIONS } from '@/utils/password-generator'
 import { useToastStore } from '@/stores/toast'
 import { humanizeApiError } from '@/api/client'
+import RecoveryCodeModal from '@/components/RecoveryCodeModal.vue'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -99,6 +101,9 @@ const email = ref('')
 const password = ref('')
 const passwordConfirm = ref('')
 const showPassword = ref(false)
+
+const recoveryCode = ref<string | null>(null)
+
 
 const passwordError = computed(() => {
     if (password.value.length === 0) return null
@@ -132,11 +137,16 @@ const generateMasterPassword = () => {
 const submit = async () => {
     if (!canSubmit.value) return
     try {
-        await auth.register(email.value, password.value)
-        toast.success('Account created', 'Welcome to your vault')
-        router.push({ name: 'vault' })
+        const code = await auth.register(email.value, password.value)
+        recoveryCode.value = code
     } catch (err) {
         toast.error('Registration failed', humanizeApiError(err))
     }
+}
+
+const onRecoveryConfirmed = () => {
+    recoveryCode.value = null
+    toast.success('Account created', 'Welcome to your vault')
+    router.push({ name: 'vault' })
 }
 </script>

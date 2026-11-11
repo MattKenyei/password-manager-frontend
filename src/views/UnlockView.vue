@@ -34,6 +34,13 @@
                     {{ auth.busy ? 'Unlocking...' : 'Unlock' }}
                 </button>
 
+                <p class="text-sm text-center text-gray-600 dark:text-gray-400 mt-2">
+                    <RouterLink to="/recover" data-testid="forgot-password-link"
+                        class="text-indigo-600 dark:text-indigo-400 hover:underline">
+                        Forgot password?
+                    </RouterLink>
+                </p>
+
                 <!-- Кнопка биометрии — внутри карточки, под формой -->
                 <button v-if="auth.biometricAvailable && auth.biometricEnabled" type="button"
                     class="w-full py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center justify-center gap-2"

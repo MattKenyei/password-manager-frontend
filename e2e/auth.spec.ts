@@ -1,22 +1,34 @@
-import { test, expect, Page } from '@playwright/test'
+import { test, expect, type Page } from '@playwright/test'
 
 const uniqueEmail = () => `e2e-${Date.now()}-${Math.random().toString(36).slice(2)}@example.com`
 const MASTER_PASSWORD = 'test-master-password-123'
 
-const register = async (page: Page, email: string): Promise<void> => {
+const register = async (page: Page, email: string) => {
     await page.goto('/register')
     await page.locator('input[type="email"]').fill(email)
     await page.locator('input[autocomplete="new-password"]').first().fill(MASTER_PASSWORD)
     await page.locator('input[autocomplete="new-password"]').nth(1).fill(MASTER_PASSWORD)
     await page.locator('button[type="submit"]').click()
+
+    await expect(page.getByTestId('recovery-code-modal')).toBeVisible({ timeout: 15_000 })
+    await page.getByTestId('recovery-confirm-checkbox').check()
+    await page.getByTestId('recovery-continue').click()
+
     await expect(page).toHaveURL(/\/vault/, { timeout: 15_000 })
 }
 
-const createItem = async (page: Page, title: string): Promise<void> => {
+const createItem = async (page: Page, title: string) => {
     await page.getByTestId('new-item').click()
     await page.getByTestId('item-title').fill(title)
     await page.getByTestId('item-save').click()
     await expect(page.getByText(title, { exact: true })).toBeVisible({ timeout: 10_000 })
+}
+
+const unlock = async (page: Page, email: string, password = MASTER_PASSWORD) => {
+    await page.locator('input[type="email"]').fill(email)
+    await page.locator('input[autocomplete="current-password"]').fill(password)
+    await page.locator('button[type="submit"]').click()
+    await expect(page).toHaveURL(/\/vault/, { timeout: 15_000 })
 }
 
 test('register → create item → reload → unlock → item persists', async ({ page }) => {
@@ -28,11 +40,7 @@ test('register → create item → reload → unlock → item persists', async (
     await page.reload()
     await expect(page).toHaveURL(/\/unlock/)
 
-    await page.locator('input[type="email"]').fill(email)
-    await page.locator('input[autocomplete="current-password"]').fill(MASTER_PASSWORD)
-    await page.locator('button[type="submit"]').click()
-
-    await expect(page).toHaveURL(/\/vault/, { timeout: 15_000 })
+    await unlock(page, email)
     await expect(page.getByText('Playwright Test Item', { exact: true })).toBeVisible({ timeout: 10_000 })
 })
 
@@ -44,14 +52,10 @@ test('create item, log out, unlock, item still there', async ({ page }) => {
 
     await page.getByTestId('nav-settings').click()
     await expect(page).toHaveURL(/\/settings/)
-
     await page.getByTestId('logout').click()
     await expect(page).toHaveURL(/\/unlock/)
 
-    await page.locator('input[type="email"]').fill(email)
-    await page.locator('input[autocomplete="current-password"]').fill(MASTER_PASSWORD)
-    await page.locator('button[type="submit"]').click()
-
+    await unlock(page, email)
     await expect(page.getByText('Lock Test', { exact: true })).toBeVisible({ timeout: 10_000 })
 })
 
@@ -62,9 +66,7 @@ test('dark theme toggle persists across reload', async ({ page }) => {
 
     await page.getByTestId('nav-settings').click()
     await expect(page).toHaveURL(/\/settings/)
-
     await page.getByTestId('theme-dark').click()
-
     await expect(page.locator('html')).toHaveClass(/dark/)
 
     await page.reload()
