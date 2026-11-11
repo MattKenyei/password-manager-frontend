@@ -31,6 +31,11 @@ const router = createRouter({
             component: () => import('@/views/SettingsView.vue'),
             meta: { requiresUnlock: true },
         },
+        {
+            path: '/recover',
+            name: 'recover',
+            component: () => import('@/views/RecoverView.vue'),
+        }
     ],
 })
 
