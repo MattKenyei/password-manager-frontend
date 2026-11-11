@@ -71,7 +71,11 @@ const submit = async () => {
                 device_platform: 'extension',
             })
 
-            const wrapped = base64ToBytes(loginResp.wrapped_account_key)
+            const masterKeyWrapped = loginResp.wrapped_keys.find((k) => k.kind === 'master')
+            if (!masterKeyWrapped) {
+                throw new Error('Server response missing master wrapped key')
+            }
+            const wrapped = base64ToBytes(masterKeyWrapped.wrapped_blob)
             const accountKey = await decrypt(masterKey, wrapped)
 
             const finishResp = await send({
